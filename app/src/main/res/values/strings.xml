@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">polygons</string>
     <string name="title_activity_maps">Map</string>
+    <string name="google_maps_API_key">AIzaSyAwOcuuuCxh7b7MDvx94g3kzoC0SW8MXC8</string>
 </resources>
