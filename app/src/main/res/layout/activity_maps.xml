@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- RelativeLayout to be able to add button to MapActivity
+     (via https://stackoverflow.com/a/36281959) -->
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -12,7 +14,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MapsActivity" />
-
+  
 <RelativeLayout
 android:layout_width="match_parent"
 android:layout_height="50dp"
@@ -22,6 +24,14 @@ android:layout_marginLeft="10dp"
 android:elevation="10dp"
 android:background="@drawable/boarder"
 android:id="@+id/relLayout1">
+  
+<Button
+        android:id="@+id/polygonButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:text="Start Polygon" />
 
 <ImageView
     android:layout_width="15dp"
