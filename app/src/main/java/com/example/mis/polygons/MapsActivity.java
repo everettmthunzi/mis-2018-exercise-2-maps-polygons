@@ -203,8 +203,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         layoutMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
+
+                Double l1=latLng.latitude;
+                Double l2=latLng.longitude;
+                String coordl1 = l1.toString();
+                String coordl2 = l2.toString();
+
                 layoutMap.clear();
-               cameraPosition(latLng, DEFAULT_ZOOM, "new location");
+               cameraPosition(latLng, DEFAULT_ZOOM, "New locationL Latitude: " + coordl1
+                       + " Longitude: " +coordl2 );
             }
         });
     }
