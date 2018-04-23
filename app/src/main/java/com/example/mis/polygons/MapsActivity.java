@@ -221,9 +221,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 String coordl1 = l1.toString();
                 String coordl2 = l2.toString();
 
-                layoutMap.clear();
-               cameraPosition(latLng, DEFAULT_ZOOM, "New locationL Latitude: " + coordl1
-                       + " Longitude: " +coordl2 );
+
+                layoutMap.addMarker(new MarkerOptions()
+                        .position(latLng)
+                        .title("Your marker title")
+                        .snippet("Your marker snippet"));
+
+
+               // layoutMap.clear();
+               //cameraPosition(latLng, DEFAULT_ZOOM, "New locationL Latitude: " + coordl1
+               //        + " Longitude: " +coordl2 );
             }
         });
     }
@@ -286,7 +293,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             if (polyOpts.getPoints().size() > 1) {
                 // show Polygon
-                Polygon polygon = mMap.addPolygon(polyOpts);
+                Polygon polygon = layoutMap.addPolygon(polyOpts);
 
                 // calculate surface area of Polygon
                 Thread surfaceCalculation = new Thread(new Runnable() {
@@ -309,7 +316,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                mMap.addMarker(new MarkerOptions()
+                                layoutMap.addMarker(new MarkerOptions()
                                         .position(centroid)
                                         .title(displayArea));
                             }
