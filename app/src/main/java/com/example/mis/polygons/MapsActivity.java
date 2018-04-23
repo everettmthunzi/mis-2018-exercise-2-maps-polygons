@@ -2,6 +2,8 @@ package com.example.mis.polygons;
 
 import android.Manifest;
 import android.app.Dialog;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -21,6 +23,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -50,10 +53,15 @@ import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 /* REF: API Course
@@ -90,11 +98,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private static final int ERROR_DIALOG_REQUEST = 9001;
 
+    // var referencing text field for marker title
+    private EditText textField;
+
+    /* Setup for storing in SharedPreferences
+     * (via https://developer.android.com/training/data-storage/shared-preferences.html)
+     */
+    private static SharedPreferences sharedPref;
+    private static SharedPreferences.Editor editor;
+
+    // counter as id for SharedPrefs
+    int id = 0;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        autoCompleteTextView = (AutoCompleteTextView) findViewById(R.id.input_search);
         imageViewGPS = (ImageView) findViewById(R.id.ic_gps);
         imageViewInfo = (ImageView) findViewById(R.id.place_info);
 
@@ -102,6 +121,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(correctGoogleServices()){
             getLocationPermission();
         }
+
+        // Reference the text field from activity_main.xml
+        textField = findViewById(R.id.input_search);
         
         // Reference the polygon button from activity_main.xml
         polygonButton = findViewById(R.id.polygonButton);
@@ -109,6 +131,78 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
          * doing it the hard way
          */
         polygonButton.setOnClickListener(startPolygon);
+
+        /* Get context and shared preferences
+         * (via https://developer.android.com/training/data-storage/shared-preferences.html)
+         */
+        sharedPref = MapsActivity.this.getPreferences(Context.MODE_PRIVATE);
+        editor = sharedPref.edit();
+    }
+
+    // Method to clear saved markers
+    public void clearAllMarkers(View v) {
+        layoutMap.clear();
+        editor.clear();
+        editor.commit();
+    }
+
+    /* Method to save our stuff before the app stops
+     * (via https://developer.android.com/guide/components/activities/activity-lifecycle.html#onstop)
+     */
+    @Override
+    protected void onStop() {
+        // call the superclass method first
+        super.onStop();
+
+        editor.commit();
+    }
+
+    // Read existing markers from shared preferences
+    private void readMarkers(SharedPreferences sharedPref) {
+        Map<String, ?> savedMarkers = sharedPref.getAll();
+        /* Iterate through map
+         * (via https://stackoverflow.com/a/1066603)
+         */
+        Iterator it = savedMarkers.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            Set<String> markerStringSet = (Set<String>) pair.getValue();
+            Iterator<String> set_it = markerStringSet.iterator();
+
+            // Reconstructing the values
+            String title = "", lat = "", lon = "";
+            while (set_it.hasNext()) {
+                String current = set_it.next();
+                String[] arr = current.split(":", 2);
+                Log.d(TAG, "Printing split values");
+                for (String s : arr) {
+                    Log.d(TAG, s);
+                }
+                if (arr[0].equals("lat")) {
+                    lat = arr[1];
+                }
+                else if (arr[0].equals("lon")) {
+                    lon = arr[1];
+                }
+                else if (arr[0].equals("title")) {
+                    title = arr[1];
+                }
+            }
+
+            // construct marker out of loaded property
+            final MarkerOptions marker = new MarkerOptions()
+                    .title(title)
+                    .position(new LatLng(Double.parseDouble(lat),
+                            Double.parseDouble(lon)));
+
+            // add it to the map
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    layoutMap.addMarker(marker);
+                }
+            });
+        }
     }
 
     // --confirm correct google play store services version
@@ -207,6 +301,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             // -- disabling default my location button (screen estate to be used for text-field)
             layoutMap.getUiSettings().setMyLocationButtonEnabled(false);
+
             initializeFindLocation();
         }
 
@@ -221,21 +316,43 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 String coordl1 = l1.toString();
                 String coordl2 = l2.toString();
 
+                MarkerOptions marker = new MarkerOptions()
+                        .position(latLng);
+                if (textField.getText().length() == 0) {
+                    marker.title(latLng.toString());
+                }
+                else {
+                    marker.title(textField.getText().toString());
+                }
 
-                layoutMap.addMarker(new MarkerOptions()
-                        .position(latLng)
-                        .title("Your marker title")
-                        .snippet("Your marker snippet"));
+                layoutMap.addMarker(marker);
 
+                // Construct set to add to SharedPrefs
+                Set<String> set = new HashSet<>();
+                set.add("title:"+marker.getTitle());
+                set.add("lat:"+Double.toString(l1));
+                set.add("lon:"+Double.toString(l2));
 
-               // layoutMap.clear();
-               //cameraPosition(latLng, DEFAULT_ZOOM, "New locationL Latitude: " + coordl1
-               //        + " Longitude: " +coordl2 );
+                // add set to SharedPrefs with id as key
+                editor.putStringSet(Integer.toString(id), set);
+                id++;
+
+                // when capturing a polygon, add all markers to it
+                if (polygonCaptureEnabled) polyOpts.add(latLng);
             }
         });
+
+        // reload saved markers
+        final Thread reloadMarkers = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                readMarkers(sharedPref);
+            }
+        });
+        reloadMarkers.run();
     }
           
-        // PolygonOptions, will hold all vertices of the polygon
+    // PolygonOptions, will hold all vertices of the polygon
     private PolygonOptions polyOpts = new PolygonOptions();
     // var referencing button that initiates polygon capture/drawing
     private Button polygonButton;
@@ -291,6 +408,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             // disable Polygon capture
             polygonCaptureEnabled = false;
 
+            Log.d(TAG, "Number of vertices in polygon: " + polyOpts.getPoints().size());
+
             if (polyOpts.getPoints().size() > 1) {
                 // show Polygon
                 Polygon polygon = layoutMap.addPolygon(polyOpts);
@@ -301,10 +420,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     public void run() {
                         Double area = calculatePolygonArea(polyOpts.getPoints());
 
+                        Log.d(TAG, "Area: " + area);
+
                         // make units sane
                         String title;
-                        if (area > 1000) {
-                            title = (area / 1000) + "km²";
+                        if (area > 1000000) {
+                            title = (area / 1000000) + "km²";
                         } else {
                             title = area + "m²";
                         }
@@ -323,6 +444,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         });
                     }
                 });
+                surfaceCalculation.run();
             }
             else {
                 Toast tooFewMarkersCaptured = Toast.makeText(MapsActivity.this,
@@ -419,13 +541,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .addApi(Places.PLACE_DETECTION_API)
                 .enableAutoManage(this, this)
                 .build();
-      
-        autoCompleteTextView.setOnItemClickListener(mAutocompleteClickListener);
 
-        autocompleteAdapter = new PlaceAutoCompleteAdapter(this, googleAPIClient,
+        /*autocompleteAdapter = new PlaceAutoCompleteAdapter(this, googleAPIClient,
                 LAT_LNG_BOUNDS, null);
-
-        autoCompleteTextView.setAdapter(autocompleteAdapter);
 
         autoCompleteTextView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
 
@@ -441,7 +559,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
                 return false;
             }
-        });
+        });*/
 
         imageViewGPS.setOnClickListener(new View.OnClickListener() {
             @Override
