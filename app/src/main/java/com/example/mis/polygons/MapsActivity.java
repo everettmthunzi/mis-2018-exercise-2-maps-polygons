@@ -167,16 +167,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    /* -- initializing the map based on the Google API documentation code snippet
-     * https://developer.android.com/guide/components/fragments.html
-     */
+    // -- initializing the map based on the Google API documentation code snippet
+    // https://developer.android.com/guide/components/fragments.html
     private void initializeMap() {
         // --
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(MapsActivity.this);
     }
 
-    // this interface method is called when map is ready
+    // -- this interface method is called when map is ready
     @Override
     public void onMapReady(GoogleMap googleMap) {
         Toast.makeText(this, "Map Ready", Toast.LENGTH_SHORT).show();
@@ -193,10 +192,21 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
             // -- set location properties (blue dot on the map)
             layoutMap.setMyLocationEnabled(true);
+
             // -- disabling default my location button (screen estate to be used for text-field)
             layoutMap.getUiSettings().setMyLocationButtonEnabled(false);
             initializeFindLocation();
         }
+
+        // -- long press implementation
+        // https://stackoverflow.com/questions/42401131/add-marker-on-long-press-in-google-maps-api-v3
+        layoutMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(LatLng latLng) {
+                layoutMap.clear();
+               cameraPosition(latLng, DEFAULT_ZOOM, "new location");
+            }
+        });
     }
 
     // -- initializing 'find location' using editor action listener
@@ -260,6 +270,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
         hideSoftKeyboard();
     }
+
     // -- acquiring Device location
     private void getDeviceLocation() {
         Log.d(TAG, "getDeviceLocation: getting the devices current location");
@@ -367,6 +378,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void hideSoftKeyboard() {
         this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
+
+
+
     /* REF: API Course
      * Title : <android Google Maps API & Google Places API Course>
      * Author: <Mitch Tabian>
